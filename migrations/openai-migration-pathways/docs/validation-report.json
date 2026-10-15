@@ -31,7 +31,8 @@
     "packaging_regressions": "passed: explicit marketplace identity, ZIP checksum, inventory/hash parity, hidden catalog, invalid input and overwrite rejection",
     "relative_document_links": {
       "status": "passed",
-      "links": 52
+      "links": 47,
+      "checked_at": "2026-10-15T15:01:13.267411+00:00"
     },
     "repository_marketplace": "passed: openai-solutions entry resolves to the plugin under migrations",
     "workflow_structure": "passed YAML parsing, read-only test permissions and canonical-repository release restriction; hosted execution is checked separately"
