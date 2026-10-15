@@ -4,17 +4,57 @@ OpenAI Migration Pathways is a Codex plugin that helps teams assess and plan mig
 
 See [installation](INSTALL.md), [the catalog](docs/compatibility-catalog.md), [release notes](docs/release-0.4.2.md), and [refresh procedure](docs/refreshing-evidence.md).
 
-## Discovery without code
+## How to use it
 
-> Use $openai-migration-pathways. Help me migrate an Azure GPT-4.1 workload to Bedrock with geographic residency and prompt caching. Do not inspect code. Ask the questions needed to narrow the route and explain assumptions.
+Use the plugin through a normal conversation in Codex. Provide your requirements or a repository, and Codex uses the plugin's instructions, compatibility catalog and evaluation scripts to produce the assessment.
 
-See [testing scenarios](docs/testing-scenarios.md), [discovery guidance](skills/openai-migration-pathways/references/discovery.md), and [compatibility rules](skills/openai-migration-pathways/references/route-compatibility.md). The refreshed workbook is in `assets/workbooks/`; the evaluator reads `data/capabilities.json`, not Excel. The target policy includes GPT-6 Astra, GPT-6.1 Sol, GPT-6 Sol, GPT-6 Luna, GPT-5.6 Sol/Terra/Luna, GPT-5.5 and GPT-5.4. GPT-OSS and Daybreak are excluded. Other source models remain valid migration inputs; they are not target candidates.
+### 1. Install it once
 
-## Start a migration (with code assessments)
+For the shared release folder, extract the complete package and run:
 
-After installing the plugin, start a new Codex task:
+```bash
+codex plugin marketplace add /absolute/path/to/extracted-package
+codex plugin add openai-migration-pathways@openai-solutions
+```
 
-> Use $openai-migration-pathways for this repository: <GitHub URL>. Assess the entire repository and prepare the AWS deployment package, application changes, and one unified Azure-to-AWS architecture. Target Region: <AWS Region>. Do not deploy cloud resources.
+Keep the entire extracted folder, including the hidden `.agents` directory. Start a new Codex chat after installation. See [installation instructions](INSTALL.md) for prerequisites, installing from a repository checkout, and the GitHub installation option once this contribution is merged.
+
+### 2. Choose how to start
+
+Select the plugin in Codex or name it in your message. Start with the scope you need:
+
+**Discovery — requirements without code**
+
+> Use $openai-migration-pathways. We have an Azure OpenAI document assistant using hosted file search, streaming and conversation history. We need US data residency, authorized citations and strict JSON answers. Produce a full discovery assessment with routes, blockers, orchestration proposals and Azure-to-AWS mappings. Do not inspect a repository.
+
+**Code assessment — a repository or local folder**
+
+> Use $openai-migration-pathways. Assess this repository: [repository URL or local path]. Target AWS Region: us-east-1. Identify application routes, AI features, migration gaps, required orchestration and Azure-to-AWS service mappings. Produce the full assessment. Do not deploy.
+
+**Implementation — after reviewing the assessment**
+
+> Use $openai-migration-pathways. Use the assessment to prepare the application changes, AWS infrastructure source, unified architecture and validation plan. Keep unresolved decisions visible. Do not deploy.
+
+### 3. Answer the important follow-up questions
+
+The plugin clarifies information that affects the route, including:
+
+- Required models, APIs and features.
+- Allowed processing locations and data-retention requirements.
+- Whether application-managed retrieval or conversation history is acceptable.
+- Performance, cost and operational constraints.
+
+You do not need to edit the compatibility JSON or run evaluation scripts yourself. Discovery and offline assessment do not require cloud credentials; repository access is needed for code assessment.
+
+### 4. Review the results and continue in the same chat
+
+The report identifies recommended and rejected routes, blockers, orchestration designs, service mappings and next validation steps. With code, it adds file references and concrete implementation findings.
+
+Continue with requests such as:
+
+> Explain G03, compare the two proposed routes, and show what code must change before migration.
+
+Use the gap IDs and route names from your own report. An assessment describes required orchestration; implementing and validating it is a separate step.
 
 ## What the customer receives
 
@@ -38,33 +78,27 @@ Every full saved assessment includes readable Markdown and a shared JSON contrac
 
 9. Validation, readiness and next actions.
 
-Discovery records supplied requirements and assumptions. Code assessment adds repository evidence, source-call contracts and coverage. Every gap identifies affected routes/services, impact, owner, resolution, tests and any stage it blocks. Orchestration acceptance, implementation and verification are separate states. See the [shared report contract](skills/openai-migration-pathways/references/shared-report.md) and [fictional discovery example](examples/discovery-report/assessment.md).
+## How the plugin builds a migration plan
 
-When application changes or a deployment package are requested, additional outputs include a canonical service matrix, application and infrastructure source, one architecture in Draw.io/SVG/JSON, migration waves, validation evidence and checksums. These require workload-specific implementation.
+The plugin combines **Codex analysis with a deterministic compatibility evaluator**. Codex gathers requirements and, when a repository is supplied, traces application entry points, AI SDK calls, configuration and dependencies. It turns each AI workload into explicit constraints covering features, APIs, geography, retention and operational needs.
 
-The optional [deployment page](docs/deployment-page.md) supports preparation and authorized deployment workflows. **Its current account-availability check cannot verify the approved catalog's inference-profile or Mantle routes. Live deployment stays blocked until a suitable account-specific verifier is supplied.** Catalog compatibility and a passing report validator do not establish account access or deployment readiness.
+The evaluator checks those constraints against `data/capabilities.json`, which contains model capabilities backed by dated AWS and OpenAI documentation. It evaluates each exact **model + endpoint + API + Region + routing configuration** against the complete feature combination. Results are classified as **YES** (documented compatibility), **NO** (incompatible), **VERIFY** (unresolved evidence), or **ORCHESTRATED** (requires an accepted application workaround).
 
-The architecture shows Azure placement, migration connections, and the AWS target. The bundle includes 36 pinned official Azure/AWS icons; services without a matching icon use labeled shapes. Approved OpenAI model choices use `bedrock-runtime` or `bedrock-mantle` when available. GPT-OSS and Daybreak are not target candidates.
+Codex uses these results, customer preferences and documented tradeoffs to propose a route and migration plan. Gaps become concrete application changes, orchestration designs, Azure-to-AWS mappings and validation tasks, while original incompatibilities remain visible. Report validators check consistency between the recommendations, saved evaluations and evidence. Account access, model quality, performance and deployment readiness require separate verification.
 
-## Examples scenarios - copy the following examples in the prompt to try the plugin
+## Example scenarios
 
-Paste any of these into the OpenAI Migration Pathways agent to exercise discovery mode. Each is written the same way a field rep would describe a customer — no pre-filled answers, so the engine runs its own discovery and route evaluation. They deliberately cover three different outcomes: a residency conflict, a clean structured-output case, and a zero-retention conflict.
+Paste any of these into the OpenAI Migration Pathways agent to exercise discovery mode.
 
 ### Scenario 1 — EU residency vs. US-only model
-
-A geography conflict: the workload demands EU processing, which forces the engine to confront entry-Region-vs-processing-Region and reject US/global profiles.
 
 > Migrate our Azure OpenAI customer-support assistant to Bedrock. It uses streaming and client-side tools, and we rely on prompt caching for a long shared system prompt. Hard requirement: all inference and cached data must stay within the EU — this is a regulated banking customer. Which Bedrock pathway supports this, and if none does, what are our options?
 
 ### Scenario 2 — Structured outputs for a data-extraction pipeline
 
-A cleaner case that should surface a qualifying or verify-level pathway, and exercises the structured-output nuance (native strict schema vs. VERIFY across APIs).
-
 > We have a direct OpenAI document-extraction service moving to Bedrock. It needs strict structured JSON outputs (a fixed schema), plus streaming and client tools. No prompt caching, no guardrails. US geography is fine, any US Region works. Which model and API should we use, and is strict structured output actually native or does it need verification?
 
 ### Scenario 3 — Zero-retention vs. background + stored state
-
-A retention conflict: ZDR collides with background execution and stored conversation state, and should trip the engine's "store=false is not full ZDR" and retention-conflict logic.
 
 > Our Azure OpenAI agent runs long background jobs and keeps stored conversation state across turns. We're migrating to Bedrock under a strict zero-data-retention policy for a healthcare client. We also want streaming. Can we keep background execution and stored state under ZDR, and what exactly has to change if not?
 
